@@ -1,0 +1,42 @@
+#!/usr/bin/python
+#
+# List DHCP leases
+# - Usage: show-dhcpd-leases <optional search string>
+#
+import subprocess
+import sys
+
+leases = []
+
+cmd = ["cat", "/var/lib/dhcpd/dhcpd.leases"]
+proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+name = ""
+for line in proc.stdout.readlines():
+    if "lease" in line:
+      ip = line.split()[1]
+    elif "starts" in line:
+      starts_date = line.split()[2]
+      starts_time = line.split()[3].replace(';', '')
+      starts = starts_date + " " + starts_time
+    elif "ends" in line:
+      ends_date = line.split()[2]
+      ends_time = line.split()[3].replace(';', '')
+      ends = ends_date + " " + ends_time
+    elif "hardware ethernet" in line:
+      mac = line.split()[2].replace(';', '')
+    elif "client-hostname" in line:
+      name = line.split()[1].replace(';', '')
+    elif "}" in line:
+      lease = ip + "\t" + mac + "\t" + starts + "\t" + ends + "\t" + name
+      leases.append(lease)
+      name = ""
+
+print("IP Address\tMAC Address\t\tLease Start\t\tLease End\t\tHostname")
+if len(sys.argv) == 1:
+    for lease in leases:
+        print lease
+else:
+    sub = sys.argv[1]
+    matches = [s for s in leases if sub.lower() in s.lower()]
+    for lease in matches:
+        print lease
